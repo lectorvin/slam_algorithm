@@ -18,7 +18,6 @@ RANSAC_CONSENSUS = 30
 LIFE = 40
 
 
-
 class landmark(object):
   """ landmark we try to find
       pos = (x, y);
@@ -42,7 +41,6 @@ landmarkDB = [landmark() for i in range(MAX_LANDMARKS)]
 DBSize = 0
 EKFLandmarks = 0
 IDtoID = [[0,0] for i in range(MAX_LANDMARKS)]
-# int [,] = new int IDtoID [MAXLANDMARKS, 2]
 
 # DB correct functions starts
 def add_to_DB(*lms):      #+ return number of last landmark in DB or -1
@@ -53,15 +51,14 @@ def add_to_DB(*lms):      #+ return number of last landmark in DB or -1
   global DBSize
   for lm in lms:
       if DBSize+1 < MAX_LANDMARKS:   # len(landmarksDB) but it's the same
-          landmarkDB[DBSize].pos[0] = lm.pos[0]    # set landmark coordinates
-          landmarkDB[DBSize].pos[1] = lm.pos[1]    # set landmark coordinates
-          landmarkDB[DBSize].life = LIFE           # set landmark life counter
-          landmarkDB[DBSize].id_ = DBSize           # set landmark id
-          landmarkDB[DBSize].total_times_observed = 1   # initialise number of times we've seen landmark
+          landmarkDB[DBSize].pos = [lm.pos[0], lm.pos[1]]
+          landmarkDB[DBSize].life = LIFE
+          landmarkDB[DBSize].id_ = DBSize         # set landmark id
+          landmarkDB[DBSize].total_times_observed = 1
           landmarkDB[DBSize].bearing = lm.bearing  # set last bearing was seen at
-          landmarkDB[DBSize].range_ = lm.range_      # set last range was seen at
-          landmarkDB[DBSize].a = lm.a              # store landmarks wall equation
-          landmarkDB[DBSize].b = lm.b              # store landmarks wall equation
+          landmarkDB[DBSize].range_ = lm.range_    # set last range was seen at
+          landmarkDB[DBSize].a = lm.a           # store landmarks wall equation
+          landmarkDB[DBSize].b = lm.b           # store landmarks wall equation
           DBSize += 1
   return DBSize
 
@@ -92,8 +89,7 @@ def add_slam_id(landmark_ID, slam_ID):   #+ return nothing
   """
 
   global EKFLandmarks
-  IDtoID[EKFLandmarks][0] = landmark_ID
-  IDtoID[EKFLandmarks][1] = slam_ID
+  IDtoID[EKFLandmarks] = [landmark_ID, slam_ID]
   EKFLandmarks += 1
 
 
@@ -133,20 +129,21 @@ def distance_to_line(x, y, a, b):             #+ return distance
   return temp
 
 
-def get_closest_association(lm):              #+ return id, total_times_observed
+def get_closest_association(lm):             #+ return id, total_times_observed
     """ return the closest landmark to given in DB
         lm - landmark;
     """
 
     closest_landmark = temp = 0
     least_distance = 99999       # 99999m is least initial distance, its big
-    for landmark in get_DB():      # for i in range(DBSize)
+    for landmark in get_DB():    # for i in range(DBSize)
         # only associate to landmarks we have seen more than MIN_OBSERVATIONS times
-        if landmark.total_times_observed > MIN_OBSERVATIONS:
-            temp = landmark_distance(lm, landmark)
-            if temp < least_distance:
-                least_distance = temp
-                closest_landmark = landmark
+        if landmark:
+            if landmark.total_times_observed > MIN_OBSERVATIONS:
+                temp = landmark_distance(lm, landmark)
+                if temp < least_distance:
+                    least_distance = temp
+                    closest_landmark = landmark
 
     if least_distance == 99999:
         return -1, 0
@@ -161,9 +158,8 @@ def get_association(lm):                      # return index or -1
         lm - landmark to associate;
     """
 
-
     for i in range(DBSize):
-        if (landmark_distance(lm, landmarkDB[i])<MAX_ERROR) &
+        if (landmark_distance(lm, landmarkDB[i])<MAX_ERROR) &\
            (landmarkDB[i].id_ != -1):
             landmarkDB[i].life = LIFE
             landmarkDB[i].total_times_observed += 1
@@ -196,13 +192,13 @@ def get_line_landmark(a, b, robot_position):  #+ return landmark
     px = (b-bo) / (ao-a)
     py = ((ao * (b-bo)) / (ao-a)) + bo
     range_error = distance(robot_position[0], robot_position[1], px, py)
-    bearing_error = math.atan((py - robot_position[1]) / (px - robot_position[0])) - \
+    bearing_error = math.atan((py - robot_position[1]) / \
+                              (px - robot_position[0])) - \
                     robot_position[2]
                     # do you subtract or add robot bearing? I am not sure!
     lm = landmark()
     # convert landmark to map coordinate
-    lm.pos[0] = x
-    lm.pos[1] = y
+    lm.pos = [x,y]
     lm.range_ = range_
     lm.bearing = bearing
     lm.a = a
@@ -223,27 +219,29 @@ def least_squares_line_estimate(laserdata, robot_position, selected_points):   #
       don't know, what this function return
   """
 
-  # print(selected_points)
-  array_size = len(selected_points)
-  y = x = sumY = sumYY = sumX = sumXX = sumYX = 0
-  for i in range(array_size):
-    x = (math.cos((selected_points[i]*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) *
-        laserdata[int(selected_points[i])]) + robot_position[0]
-    y = (math.sin((selected_points[i]*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) *
-        laserdata[int(selected_points[i])]) + robot_position[1]
-    sumY += y
-    sumX += x
-    sumYY += y*y
-    sumXX += x*x
-    sumYX += y*x
   try:
-    b = (sumY*sumXX - sumX*sumYX) / (array_size*sumXX - sumX*sumX)      # дисперсия
-  except ZeroDivisionError:
-    b = 0
-  try:
-    a = (array_size*sumYX - sumX*sumY) / (array_size*sumXX - sumX*sumX)   # погрешности
-  except ZeroDivisionError:
-    a = 0
+      array_size = len(selected_points)
+      y = x = sumY = sumYY = sumX = sumXX = sumYX = 0
+      for i in range(array_size):
+        x = (math.cos((selected_points[i]*DEGREES_PER_SCAN*CONV) \ + (robot_position[2]*CONV)) *
+             laserdata[int(selected_points[i])]) + robot_position[0]
+        y = (math.sin((selected_points[i]*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) *
+             laserdata[int(selected_points[i])]) + robot_position[1]
+        sumY += y
+        sumX += x
+        sumYY += y**2
+        sumXX += x**2
+        sumYX += y*x
+      try:
+        b = (sumY*sumXX - sumX*sumYX) / (array_size*sumXX - sumX*sumX)      # дисперсия
+      except ZeroDivisionError:
+        b = 0
+      try:
+        a = (array_size*sumYX - sumX*sumY) / (array_size*sumXX - sumX*sumX)   # погрешности
+      except ZeroDivisionError:
+        a = 0
+  except:
+      a = b = 0
 
   return a, b
 
@@ -322,75 +320,75 @@ def ransac_algorithm(laserdata, robot_position):       # return found_landmarks
         no_trials += 1
 
   for i in range(total_lines):
-      #print(type(get_line_landmark(la[i], lb[i], robot_position)), type(temp_landmarks[i]))
       temp_landmarks[i] = get_line_landmark(la[i], lb[i], robot_position)
 
   found_landmarks = [landmark() for i in range(total_lines)]
 
   for i in range(len(found_landmarks)):
      found_landmarks[i] = temp_landmarks[i]
-     # foundLandmarks[i] = (landmark)tempLandmarks[i]
 
   return found_landmarks
 
 
-def remove_bad_landmarks(laserdata, robot_position):   # return 0
-  maxrange = 0
-  for i in range(len(laserdata)-1):
-  # distance further away than 8.1m we assume are failed returns
-  # we get the laser data with max range
-    if laserdata[i-1]<8.1 & laserdata[i+1]<8.1 & laserdata[i]>maxrange:
-        maxrange = laserdata[i]
+def remove_bad_landmarks(laserdata, robot_position):   # return nothing
+    maxrange = 0
+    for i in range(len(laserdata)-1):
+    # distance further away than 8.1m we assume are failed returns
+    # we get the laser data with max range
+      if (laserdata[i-1]<8.1) & (laserdata[i+1]<8.1) & (laserdata[i]>maxrange):
+          maxrange = laserdata[i]
 
-  # maxrange = MAX_RANGE
-  xbounds = [0, 0, 0, 0]
-  ybounds = [0, 0, 0, 0]
-  # get bounds of rectangular box to remove bad landmarks from
-  xbounds[0] = math.cos((1*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) * \
-               maxrange + robot_position[0]
-  ybounds[0] = math.sin((1*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) * \
-               maxrange + robot_position[1]
-  xbounds[1] = xbounds[0] + math.cos((180*DEGREES_PER_SCAN*CONV) + \
+    # maxrange = MAX_RANGE
+    xbounds = [0, 0, 0, 0]
+    ybounds = [0, 0, 0, 0]
+    # get bounds of rectangular box to remove bad landmarks from
+    xbounds[0] = math.cos((1*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) * \
+                 maxrange + robot_position[0]
+    ybounds[0] = math.sin((1*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) * \
+                 maxrange + robot_position[1]
+    xbounds[1] = xbounds[0] + math.cos((180*DEGREES_PER_SCAN*CONV) + \
                                      (robot_position[2]*CONV)) * maxrange
-  ybounds[1] = ybounds[0] + math.sin((180*DEGREES_PER_SCAN*CONV) + \
-                                     (robot_position[2]*CONV)) * maxrange
-  xbounds[2] = math.cos((359*DEGREES_PER_SCAN*CONV) + \
-                        (robot_position[2]*CONV)) * maxrange + robot_position[0]
-  ybounds[2] = math.sin((359*DEGREES_PER_SCAN*CONV) + \
-                        (robot_position[2]*CONV)) * maxrange + robot_position[1]
-  xbounds[3] = xbounds[2] + math.cos((180*DEGREES_PER_SCAN*CONV) + \
-                                     (robot_position[2]*CONV)) * maxrange
-  ybounds[3] = ybounds[2] + math.sin((180*DEGREES_PER_SCAN*CONV) + \
-                                     (robot_position[2]*CONV)) * maxrange
-  # now check DB for landmarks that are within this box
-  # decrease life of all landmarks in box.
-  # If the life reaches zero, remove landmark
-  pntx = pnty = 0
-  for k in range(DBSize+1):
-    pntx = landmarkDB[k].pos[0]
-    pnty = landmarkDB[k].pos[1]
-    i = j = 0
-    if (robot_position[0]<0 | robot_position[1]<0): in_rectangle = False
-    else: in_rectangle = True
+    ybounds[1] = ybounds[0] + math.sin((180*DEGREES_PER_SCAN*CONV) + \
+                                       (robot_position[2]*CONV)) * maxrange
+    xbounds[2] = math.cos((359*DEGREES_PER_SCAN*CONV) + \
+                          (robot_position[2]*CONV)) * maxrange + robot_position[0]
+    ybounds[2] = math.sin((359*DEGREES_PER_SCAN*CONV) + \
+                          (robot_position[2]*CONV)) * maxrange + robot_position[1]
+    xbounds[3] = xbounds[2] + math.cos((180*DEGREES_PER_SCAN*CONV) + \
+                                       (robot_position[2]*CONV)) * maxrange
+    ybounds[3] = ybounds[2] + math.sin((180*DEGREES_PER_SCAN*CONV) + \
+                                       (robot_position[2]*CONV)) * maxrange
+    # now check DB for landmarks that are within this box
+    # decrease life of all landmarks in box.
+    # If the life reaches zero, remove landmark
+    pntx = pnty = 0
+    global DBSize
+    for k in range(DBSize+1):
+        pntx = landmarkDB[k].pos[0]
+        pnty = landmarkDB[k].pos[1]
+        i = j = 0
+        if ((robot_position[0]<0) | (robot_position[1]<0)): in_rectangle = False
+        else: in_rectangle = True
 
-    for i in range(4):
-        if ( (((ybounds[i] <= pnty) & (pnty < ybounds[j])) |
-              ((ybounds[j] <= pnty) & (pnty < ybounds[i]))) &
-             (pntx < ((xbounds[j] - xbounds[i]) *
-                      (pnty - ybounds[i]) /
-                      (ybounds[j] - ybounds[i]) +
-                      xbounds[i]
+        for i in range(4):
+            try:
+                if ( (((ybounds[i] <= pnty) & (pnty < ybounds[j])) |
+                      ((ybounds[j] <= pnty) & (pnty < ybounds[i]))) &
+                     (pntx < ((xbounds[j] - xbounds[i]) *
+                              (pnty - ybounds[i]) /
+                              (ybounds[j] - ybounds[i]) +
+                              xbounds[i]
+                             )
                      )
-             )
-           ):
-            in_rectangle = not(in_rectangle)
-        j = i
-        i += 1
+                   ):
+                    in_rectangle = not(in_rectangle)
+            except ZeroDivisionError:
+                pass
+            j = i
+            i += 1
 
-    if(inRectangle):     # in rectangle so decrease life and maybe remove
-        landmarkDB[k].life -= 1
-        if landmarkDB[k].life <= 0:
-            del(landmark[k])
-            DBSize -= 1
-
-  return 0
+        if(in_rectangle):     # in rectangle so decrease life and maybe remove
+            landmarkDB[k].life -= 1
+            if landmarkDB[k].life <= 0:
+                del(landmark[k])
+                DBSize -= 1
