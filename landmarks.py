@@ -129,7 +129,7 @@ def distance_to_line(x, y, a, b):             #+ return distance
   return temp
 
 
-def get_closest_association(lm):             #+ return id, total_times_observed
+def get_closest_association(lm):             #+ return landmark
     """ return the closest landmark to given in DB
         lm - landmark;
     """
@@ -148,7 +148,7 @@ def get_closest_association(lm):             #+ return id, total_times_observed
     if least_distance == 99999:
         return -1, 0
     else:
-        return closest_landmark.id_, closest_landmark.total_times_observed
+        return closest_landmark
 
 
 def get_association(lm):                      # return index or -1
@@ -206,7 +206,8 @@ def get_line_landmark(a, b, robot_position):  #+ return landmark
     lm.range_error = range_error
     lm.bearing_error = bearing_error
     # associate landmark to closest landmark.
-    lm.id_, lm.total_times_observed = get_closest_association(lm)
+    temp = get_closest_association(lm)
+    lm.id_, lm.total_times_observed = temp.id_, temp.total_times_observed
 
     return lm
 
@@ -223,9 +224,11 @@ def least_squares_line_estimate(laserdata, robot_position, selected_points):   #
       array_size = len(selected_points)
       y = x = sumY = sumYY = sumX = sumXX = sumYX = 0
       for i in range(array_size):
-        x = (math.cos((selected_points[i]*DEGREES_PER_SCAN*CONV) \ + (robot_position[2]*CONV)) *
+        x = (math.cos((selected_points[i]*DEGREES_PER_SCAN*CONV) + \
+                      (robot_position[2]*CONV)) * \
              laserdata[int(selected_points[i])]) + robot_position[0]
-        y = (math.sin((selected_points[i]*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) *
+        y = (math.sin((selected_points[i]*DEGREES_PER_SCAN*CONV) + \
+                      (robot_position[2]*CONV)) * \
              laserdata[int(selected_points[i])]) + robot_position[1]
         sumY += y
         sumX += x
@@ -292,9 +295,11 @@ def ransac_algorithm(laserdata, robot_position):       # return found_landmarks
 
     for i in range(total_linepoints):
       # convert ranges and bearing to coordinates
-      x = (math.cos((linepoints[i]*DEGREES_PER_SCAN*CONV) + robot_position[2]*CONV) *
+      x = (math.cos((linepoints[i]*DEGREES_PER_SCAN*CONV) + \
+                    (robot_position[2]*CONV)) *
           laserdata[linepoints[i]]) + robot_position[0]
-      y = (math.sin((linepoints[i]*DEGREES_PER_SCAN*CONV) + robot_position[2]*CONV) *
+      y = (math.sin((linepoints[i]*DEGREES_PER_SCAN*CONV) + \
+                    (robot_position[2]*CONV)) *
           laserdata[linepoints[i]]) + robot_position[1]
       d = distance_to_line(x, y, a, b)
       if (d < RANSAC_TOLERANCE):
