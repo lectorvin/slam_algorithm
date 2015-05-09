@@ -1,28 +1,35 @@
 import numpy as np
+
+
 def mean(arr):
     return sum(arr)/(len(arr))
 
+
 def mul(arr1, arr2):
-    a =  [arr1[i]*arr2[i] for i in range(len(arr1))]
+    a = [arr1[i]*arr2[i] for i in range(len(arr1))]
     return a
 
+
 def cov(arr1, arr2):
-    m = len(mul(arr1,arr2))
+    m = len(mul(arr1, arr2))
     return (sum(mul(arr1, arr2)) - sum(arr1)*sum(arr2)/m)/(m-1)
 
-def covMatrix(x,y):
+
+def covMatrix(x, y):
     # column - variable, row - observation
     try:
         temp = [[0 for j in range(len(y[0]))] for i in range(len(x[0]))]
         for i in range(len(x[0])):
             for j in range(len(y[0])):
-                temp[i][j] = round(cov([k[i] for k in x],[t[j] for t in y]),6)
+                temp[i][j] = round(cov([k[i] for k in x], [t[j] for t in y]),
+                                   6)
     except TypeError:
-        temp = [[0,0],[0,0]]
-        temp[0][0] = cov(x,x)
-        temp[0][1] = temp[1][0] = cov(x,y)
-        temp[1][1] = cov(y,y)
+        temp = [[0, 0], [0, 0]]
+        temp[0][0] = cov(x, x)
+        temp[0][1] = temp[1][0] = cov(x, y)
+        temp[1][1] = cov(y, y)
     return temp
+
 
 if __name__ == "__main__":
     x = [[-2.1, -1, 4.3]]
@@ -50,35 +57,35 @@ if __name__ == "__main__":
     P = covMatrix(M, M)
     for l in P:
         for x in l:
-            print(x,end=" ")
+            print(x, end=" ")
         print()
     print()
 
     M = np.matrix(M)
-    P = np.cov(M,rowvar=0,ddof=1)
+    P = np.cov(M, rowvar=0, ddof=1)
     for l in P:
         for x in l:
-            print(round(x,6),end=' ')
+            print(round(x, 6), end=' ')
         print()
     print()
-    
+
     U = covMatrix(B, B)
     for l in U:
         for x in l:
-            print(x,end=' ')
+            print(x, end=' ')
         print()
     print()
 
     B = np.matrix(B)
-    U = np.cov(B, rowvar=0,ddof=1)
+    U = np.cov(B, rowvar=0, ddof=1)
     for l in U:
         for x in l:
-            print(round(x,6),end=' ')
+            print(round(x, 6), end=' ')
         print()
     print()
 
     U = covMatrix(XT, XT)
     for l in U:
         for x in l:
-            print(round(x,6),end=' ')
+            print(round(x, 6), end=' ')
         print()

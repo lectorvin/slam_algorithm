@@ -340,28 +340,34 @@ def remove_bad_landmarks(laserdata, robot_position):   # return nothing
     for i in range(len(laserdata)-1):
     # distance further away than 8.1m we assume are failed returns
     # we get the laser data with max range
-      if (laserdata[i-1]<8.1) & (laserdata[i+1]<8.1) & (laserdata[i]>maxrange):
+      if (laserdata[i-1] < 8.1) &
+         (laserdata[i+1] < 8.1) &
+         (laserdata[i] > maxrange):
           maxrange = laserdata[i]
 
     # maxrange = MAX_RANGE
     xbounds = [0, 0, 0, 0]
     ybounds = [0, 0, 0, 0]
     # get bounds of rectangular box to remove bad landmarks from
-    xbounds[0] = math.cos((1*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) * \
-                 maxrange + robot_position[0]
-    ybounds[0] = math.sin((1*DEGREES_PER_SCAN*CONV) + (robot_position[2]*CONV)) * \
-                 maxrange + robot_position[1]
-    xbounds[1] = xbounds[0] + math.cos((180*DEGREES_PER_SCAN*CONV) + \
+    xbounds[0] = math.cos((1*DEGREES_PER_SCAN*CONV) +
+                          (robot_position[2]*CONV)) * maxrange +
+                 robot_position[0]
+    ybounds[0] = math.sin((1*DEGREES_PER_SCAN*CONV) +
+                          (robot_position[2]*CONV)) * maxrange +
+                 robot_position[1]
+    xbounds[1] = xbounds[0] + math.cos((180*DEGREES_PER_SCAN*CONV) +
                                      (robot_position[2]*CONV)) * maxrange
-    ybounds[1] = ybounds[0] + math.sin((180*DEGREES_PER_SCAN*CONV) + \
+    ybounds[1] = ybounds[0] + math.sin((180*DEGREES_PER_SCAN*CONV) +
                                        (robot_position[2]*CONV)) * maxrange
-    xbounds[2] = math.cos((359*DEGREES_PER_SCAN*CONV) + \
-                          (robot_position[2]*CONV)) * maxrange + robot_position[0]
-    ybounds[2] = math.sin((359*DEGREES_PER_SCAN*CONV) + \
-                          (robot_position[2]*CONV)) * maxrange + robot_position[1]
-    xbounds[3] = xbounds[2] + math.cos((180*DEGREES_PER_SCAN*CONV) + \
+    xbounds[2] = math.cos((359*DEGREES_PER_SCAN*CONV) +
+                          (robot_position[2]*CONV)) * maxrange +
+                 robot_position[0]
+    ybounds[2] = math.sin((359*DEGREES_PER_SCAN*CONV) +
+                          (robot_position[2]*CONV)) * maxrange +
+                 robot_position[1]
+    xbounds[3] = xbounds[2] + math.cos((180*DEGREES_PER_SCAN*CONV) +
                                        (robot_position[2]*CONV)) * maxrange
-    ybounds[3] = ybounds[2] + math.sin((180*DEGREES_PER_SCAN*CONV) + \
+    ybounds[3] = ybounds[2] + math.sin((180*DEGREES_PER_SCAN*CONV) +
                                        (robot_position[2]*CONV)) * maxrange
     # now check DB for landmarks that are within this box
     # decrease life of all landmarks in box.
@@ -372,12 +378,14 @@ def remove_bad_landmarks(laserdata, robot_position):   # return nothing
         pntx = landmarkDB[k].pos[0]
         pnty = landmarkDB[k].pos[1]
         i = j = 0
-        if ((robot_position[0]<0) | (robot_position[1]<0)): in_rectangle = False
-        else: in_rectangle = True
+        if ((robot_position[0] < 0) | (robot_position[1] < 0)):
+            in_rectangle = False
+        else:
+            in_rectangle = True
 
         for i in range(4):
             try:
-                if ( (((ybounds[i] <= pnty) & (pnty < ybounds[j])) |
+                if ((((ybounds[i] <= pnty) & (pnty < ybounds[j])) |
                       ((ybounds[j] <= pnty) & (pnty < ybounds[i]))) &
                      (pntx < ((xbounds[j] - xbounds[i]) *
                               (pnty - ybounds[i]) /
